@@ -11,7 +11,7 @@ Cueit is a Kanban board tool that lets LLMs manage, update, and organize tasks v
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/billyjones75/cueit.git
    cd cueit
    ```
 
