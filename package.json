@@ -1,0 +1,30 @@
+{
+  "name": "cueit-monorepo",
+  "version": "1.0.0",
+  "description": "Cueit - A Kanban board orchestrated by LLMs via MCP",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "npm run build --workspace=client && npm run build --workspace=server",
+    "start": "concurrently \"npm run start --workspace=server\" \"npm run start --workspace=client\"",
+    "clean": "rm -rf node_modules client/node_modules server/node_modules client/dist server/dist"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  },
+  "keywords": [
+    "cueit",
+    "context-management",
+    "coding-agents",
+    "project-context",
+    "monorepo"
+  ],
+  "author": "billy jones <billy@cueit.sh>",
+  "license": "GPL-3.0"
+}
