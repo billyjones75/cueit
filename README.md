@@ -22,11 +22,10 @@ Cueit is a Kanban board tool that lets LLMs manage, update, and organize tasks v
 
 3. **Set up environment variables (optional)**
    ```bash
-   cd server
-   cp env.example .env
+   cp server/env.example server/.env
    ```
 
-   Edit `.env` and set your desired port:
+   Edit `server/.env` and set your desired port:
    ```
    SERVER_PORT=3000
    ```
