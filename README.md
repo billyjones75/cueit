@@ -2,6 +2,8 @@
 
 Cueit is a Kanban board tool that lets LLMs manage, update, and organize tasks via an MCP server.
 
+![Demo](https://i.imgur.com/Qaj22yu.gif)
+
 ## Prerequisites
 
 - node 20.19+
