@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Check, Plus, Trash2, Edit3 } from 'lucide-react';
 import { BaseModalField } from './ModalField';
+import { getInsertIndex } from '../utils/fractionalIndexing';
 
 export interface ChecklistItem {
   id: string;
@@ -16,7 +17,7 @@ export interface ChecklistModalField extends BaseModalField {
   onAddItem?: (text: string) => void;
   onUpdateItem?: (id: string, updates: Partial<ChecklistItem>) => void;
   onDeleteItem?: (id: string) => void;
-  onReorderItems?: (items: ChecklistItem[]) => void;
+  onMoveItem?: (itemId: string, newOrderIndex: number) => void;
   className?: string;
   placeholder?: string;
   addButtonText?: string;
@@ -27,7 +28,7 @@ export function ChecklistModalField({
   onAddItem,
   onUpdateItem,
   onDeleteItem,
-  onReorderItems,
+  onMoveItem,
   className = '',
   placeholder = 'Add new item...',
   addButtonText = 'Add Item',
@@ -90,18 +91,23 @@ export function ChecklistModalField({
   };
 
   const handleDragEnd = (result: any) => {
-    if (!result.destination || !onReorderItems) return;
+    if (!result.destination || !onMoveItem) return;
 
-    const newItems = Array.from(items);
-    const [reorderedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, reorderedItem);
+    const { source, destination } = result;
+    if (source.index === destination.index) return;
 
-    const updatedItems = newItems.map((item, index) => ({
-      ...item,
-      orderIndex: index
-    }));
+    const sortedItems = [...items].sort((a, b) => a.orderIndex - b.orderIndex);
 
-    onReorderItems(updatedItems);
+    const movedItem = sortedItems[source.index];
+    const itemsWithoutMoved = Array.from(sortedItems);
+    itemsWithoutMoved.splice(source.index, 1);
+
+    // Calculate new orderIndex using fractional indexing
+    const beforeItem = itemsWithoutMoved[destination.index - 1] || null;
+    const afterItem = itemsWithoutMoved[destination.index] || null;
+    const newOrderIndex = getInsertIndex(beforeItem, afterItem);
+
+    onMoveItem(movedItem.id, newOrderIndex);
   };
 
   const sortedItems = [...items].sort((a, b) => a.orderIndex - b.orderIndex);

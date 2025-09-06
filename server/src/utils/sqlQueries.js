@@ -403,7 +403,7 @@ export const SQL_QUERIES = {
     CREATE TABLE IF NOT EXISTS subtasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER NOT NULL,
-      text TEXT NOT NULL,
+      title TEXT NOT NULL,
       completed BOOLEAN DEFAULT 0,
       order_index INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -431,7 +431,7 @@ export const SQL_QUERIES = {
     SELECT
       id,
       task_id,
-      text,
+      title,
       completed,
       order_index,
       created_at,
@@ -443,14 +443,14 @@ export const SQL_QUERIES = {
 
   // Create new subtask
   INSERT_SUBTASK: `
-    INSERT INTO subtasks (task_id, text, completed, order_index)
+    INSERT INTO subtasks (task_id, title, completed, order_index)
     VALUES (?, ?, ?, ?)
   `,
 
   // Update subtask
   UPDATE_SUBTASK: `
     UPDATE subtasks
-    SET text = COALESCE(?, text),
+    SET title = COALESCE(?, title),
         completed = COALESCE(?, completed),
         order_index = COALESCE(?, order_index),
         updated_at = CURRENT_TIMESTAMP
@@ -462,7 +462,7 @@ export const SQL_QUERIES = {
     SELECT
       id,
       task_id,
-      text,
+      title,
       completed,
       order_index,
       created_at,

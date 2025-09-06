@@ -48,7 +48,7 @@ export const createSubtask = async (req, res) => {
     const subtask = {
       id: result.lastInsertRowid,
       task_id,
-      text,
+      title: text,
       completed: completed ? 1 : 0,
       order_index: order_index
     };
@@ -85,9 +85,9 @@ export const updateSubtask = async (req, res) => {
     }
 
     // Build values array in the exact order expected by UPDATE_SUBTASK query:
-    // text, completed, order_index, id
+    // title, completed, order_index, id
     const values = [
-      fields.text !== undefined ? fields.text : currentSubtask.text,
+      fields.text !== undefined ? fields.text : currentSubtask.title,
       fields.completed !== undefined ? (fields.completed ? 1 : 0) : currentSubtask.completed,
       fields.order_index !== undefined ? fields.order_index : currentSubtask.order_index,
       id
