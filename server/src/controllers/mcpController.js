@@ -11,7 +11,7 @@ const mcpServer = new McpServer({
   getContext: async () => ({
     name: 'Cueit',
     description: 'Cueit is a Kanban board tool that lets LLMs manage, update, and organize tasks via an MCP server.',
-    tools: ['list projects', 'create project', 'list tasks by status', 'get task details', 'create task', 'bulk create tasks', 'update task', 'delete task'],
+    tools: ['list projects', 'create project', 'list tasks by status', 'get task details', 'create task', 'bulk create tasks', 'update task', 'delete task', 'add subtask', 'add subtasks bulk', 'update subtask', 'delete subtask'],
     identity: 'You are talking to Cueit.'
   })
 });
@@ -95,6 +95,132 @@ const createTaskInProject = async (projectName, columnName, title, description) 
   const result = insertTask.run(project.id, column.id, title, description, orderIndex);
   
   return result.lastInsertRowid;
+};
+
+const createSubtaskForTask = async (projectName, taskName, subtaskTitle) => {
+  const db = getDatabase();
+  
+  const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
+  if (!task) {
+    throw new Error(`Task not found: ${taskName} in project ${projectName}`);
+  }
+  
+  const lastSubtask = db.prepare(SQL_QUERIES.GET_LAST_SUBTASK_ORDER_INDEX).get(task.id);
+  const orderIndex = (lastSubtask ? lastSubtask.order_index : 0) + 1000;
+  
+  const insertSubtask = db.prepare(SQL_QUERIES.INSERT_SUBTASK);
+  const result = insertSubtask.run(task.id, subtaskTitle, 0, orderIndex);
+  
+  return result.lastInsertRowid;
+};
+
+const createBulkSubtasksForTask = async (projectName, taskName, subtaskTitles) => {
+  const db = getDatabase();
+  
+  const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
+  if (!task) {
+    throw new Error(`Task not found: ${taskName} in project ${projectName}`);
+  }
+  
+  if (!subtaskTitles || subtaskTitles.length === 0) {
+    throw new Error('No subtasks provided');
+  }
+  
+  if (subtaskTitles.length > 50) {
+    throw new Error('Cannot create more than 50 subtasks at once');
+  }
+  
+  const insertSubtask = db.prepare(SQL_QUERIES.INSERT_SUBTASK);
+  const createdSubtasks = [];
+  let successCount = 0;
+  
+  let lastSubtask = db.prepare(SQL_QUERIES.GET_LAST_SUBTASK_ORDER_INDEX).get(task.id);
+  let currentOrderIndex = (lastSubtask ? lastSubtask.order_index : 0);
+  
+  for (const subtaskTitle of subtaskTitles) {
+    try {
+      currentOrderIndex += 1000;
+      const result = insertSubtask.run(task.id, subtaskTitle, 0, currentOrderIndex);
+      createdSubtasks.push({
+        id: result.lastInsertRowid,
+        title: subtaskTitle
+      });
+      successCount++;
+    } catch (error) {
+      console.error(`Failed to create subtask "${subtaskTitle}":`, error.message);
+    }
+  }
+  
+  return { successCount, createdSubtasks, totalRequested: subtaskTitles.length };
+};
+
+const updateSubtaskInTask = async (projectName, taskName, subtaskTitle, updates) => {
+  const db = getDatabase();
+  
+  const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
+  if (!task) {
+    throw new Error(`Task not found: ${taskName} in project ${projectName}`);
+  }
+  
+  const subtask = db.prepare(SQL_QUERIES.FIND_SUBTASK_BY_TITLE_IN_TASK).get(task.id, `%${subtaskTitle}%`);
+  if (!subtask) {
+    throw new Error(`Subtask not found: ${subtaskTitle} in task ${taskName}`);
+  }
+  
+  const updateData = {};
+  if (updates.title !== undefined) updateData.title = updates.title;
+  if (updates.order_index !== undefined) updateData.order_index = updates.order_index;
+  
+  if (Object.keys(updateData).length === 0) {
+    throw new Error('No fields to update');
+  }
+  
+  const updateFields = [];
+  const values = [];
+  
+  if (updateData.title !== undefined) { 
+    updateFields.push('title = ?'); 
+    values.push(updateData.title); 
+  }
+  if (updateData.order_index !== undefined) { 
+    updateFields.push('order_index = ?'); 
+    values.push(updateData.order_index); 
+  }
+  
+  updateFields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(subtask.id);
+  
+  const updateStmt = db.prepare(`UPDATE subtasks SET ${updateFields.join(', ')} WHERE id = ?`);
+  const result = updateStmt.run(...values);
+  
+  if (result.changes === 0) {
+    throw new Error('Failed to update subtask');
+  }
+  
+  return subtask.id;
+};
+
+const deleteSubtaskFromTask = async (projectName, taskName, subtaskTitle) => {
+  const db = getDatabase();
+  
+  const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
+  if (!task) {
+    throw new Error(`Task not found: ${taskName} in project ${projectName}`);
+  }
+  
+  const subtask = db.prepare(SQL_QUERIES.FIND_SUBTASK_BY_TITLE_IN_TASK).get(task.id, `%${subtaskTitle}%`);
+  if (!subtask) {
+    throw new Error(`Subtask not found: ${subtaskTitle} in task ${taskName}`);
+  }
+  
+  const deleteStmt = db.prepare(SQL_QUERIES.DELETE_SUBTASK);
+  const result = deleteStmt.run(subtask.id);
+  
+  if (result.changes === 0) {
+    throw new Error('Failed to delete subtask');
+  }
+  
+  return subtask.id;
 };
 
 // Register MCP tool for listing top n tasks in a given status
@@ -420,6 +546,132 @@ mcpServer.registerTool(
         }
         
         return createResponse(`Task "${task_name}" deleted successfully from project "${project_name}"`);
+      } catch (error) {
+        return createResponse(`Error: ${error.message}`);
+      }
+    });
+  }
+);
+
+// Register MCP tool for adding a subtask to a task
+mcpServer.registerTool(
+  'add subtask',
+  {
+    title: 'Add Subtask',
+    description: 'Add a subtask to an existing task in a project.',
+    inputSchema: {
+      project_name: z.string().describe('The name of the project containing the task'),
+      task_name: z.string().describe('The name of the task to add a subtask to'),
+      subtask_title: z.string().describe('The title of the subtask to create')
+    }
+  },
+  async ({ project_name, task_name, subtask_title }, req) => {
+    return withUser(req, async (userData) => {
+      try {
+        const subtaskId = await createSubtaskForTask(project_name, task_name, subtask_title);
+        return createResponse(`Subtask "${subtask_title}" added successfully to task "${task_name}" in project "${project_name}" with ID ${subtaskId}`);
+      } catch (error) {
+        return createResponse(`Error: ${error.message}`);
+      }
+    });
+  }
+);
+
+// Register MCP tool for adding multiple subtasks to a task
+mcpServer.registerTool(
+  'add subtasks bulk',
+  {
+    title: 'Add Subtasks Bulk',
+    description: 'Add multiple subtasks at once to an existing task in a project.',
+    inputSchema: {
+      project_name: z.string().describe('The name of the project containing the task'),
+      task_name: z.string().describe('The name of the task to add subtasks to'),
+      subtask_titles: z.array(z.string()).min(1).max(50).describe('Array of subtask titles to create (max 50)')
+    }
+  },
+  async ({ project_name, task_name, subtask_titles }, req) => {
+    return withUser(req, async (userData) => {
+      try {
+        const result = await createBulkSubtasksForTask(project_name, task_name, subtask_titles);
+        
+        let responseText = `Successfully created ${result.successCount} out of ${result.totalRequested} subtask(s) for task "${task_name}" in project "${project_name}"`;
+        
+        if (result.createdSubtasks.length > 0) {
+          responseText += `:\n\n${result.createdSubtasks.map((subtask, index) => `${index + 1}. ${subtask.title} (ID: ${subtask.id})`).join('\n')}`;
+        }
+        
+        if (result.successCount < result.totalRequested) {
+          responseText += `\n\nNote: ${result.totalRequested - result.successCount} subtask(s) failed to create. Check server logs for details.`;
+        }
+        
+        return createResponse(responseText);
+      } catch (error) {
+        return createResponse(`Error: ${error.message}`);
+      }
+    });
+  }
+);
+
+// Register MCP tool for updating a subtask
+mcpServer.registerTool(
+  'update subtask',
+  {
+    title: 'Update Subtask',
+    description: 'Update the title and/or position of a subtask within a task.',
+    inputSchema: {
+      project_name: z.string().describe('The name of the project containing the task'),
+      task_name: z.string().describe('The name of the task containing the subtask'),
+      subtask_title: z.string().describe('The current title of the subtask to update'),
+      updates: z.object({
+        title: z.string().optional().describe('New title for the subtask'),
+        order_index: z.number().int().optional().describe('New position/order index for the subtask')
+      }).describe('The updates to apply to the subtask')
+    }
+  },
+  async ({ project_name, task_name, subtask_title, updates }, req) => {
+    return withUser(req, async (userData) => {
+      try {
+        const subtaskId = await updateSubtaskInTask(project_name, task_name, subtask_title, updates);
+        
+        let successMessage = `Subtask "${subtask_title}" updated successfully in task "${task_name}" (project "${project_name}")`;
+        
+        const updateDetails = [];
+        if (updates.title !== undefined) {
+          updateDetails.push(`title changed to "${updates.title}"`);
+        }
+        if (updates.order_index !== undefined) {
+          updateDetails.push(`position changed to ${updates.order_index}`);
+        }
+        
+        if (updateDetails.length > 0) {
+          successMessage += ` - ${updateDetails.join(', ')}`;
+        }
+        
+        return createResponse(successMessage);
+      } catch (error) {
+        return createResponse(`Error: ${error.message}`);
+      }
+    });
+  }
+);
+
+// Register MCP tool for deleting a subtask
+mcpServer.registerTool(
+  'delete subtask',
+  {
+    title: 'Delete Subtask',
+    description: 'Delete a specific subtask from a task.',
+    inputSchema: {
+      project_name: z.string().describe('The name of the project containing the task'),
+      task_name: z.string().describe('The name of the task containing the subtask'),
+      subtask_title: z.string().describe('The title of the subtask to delete')
+    }
+  },
+  async ({ project_name, task_name, subtask_title }, req) => {
+    return withUser(req, async (userData) => {
+      try {
+        const subtaskId = await deleteSubtaskFromTask(project_name, task_name, subtask_title);
+        return createResponse(`Subtask "${subtask_title}" deleted successfully from task "${task_name}" in project "${project_name}" (ID: ${subtaskId})`);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
       }

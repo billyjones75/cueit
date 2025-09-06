@@ -486,6 +486,28 @@ export const SQL_QUERIES = {
     DELETE FROM subtasks WHERE id = ?
   `,
 
+  // Get last subtask order index for a task
+  GET_LAST_SUBTASK_ORDER_INDEX: `
+    SELECT order_index FROM subtasks
+    WHERE task_id = ?
+    ORDER BY order_index DESC
+    LIMIT 1
+  `,
+
+  // Find subtask by title pattern within a task
+  FIND_SUBTASK_BY_TITLE_IN_TASK: `
+    SELECT
+      s.id,
+      s.task_id,
+      s.title,
+      s.completed,
+      s.order_index
+    FROM subtasks s
+    WHERE s.task_id = ? AND s.title LIKE ?
+    ORDER BY s.order_index
+    LIMIT 1
+  `,
+
   // ============================================================================
   // MCP INTEGRATION QUERIES
   // ============================================================================
