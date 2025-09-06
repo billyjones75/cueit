@@ -11,7 +11,7 @@ export const createTask = async (req, res) => {
     }
 
     const db = getDatabase();
-    
+
     // Verify project and column exist
     const projectExists = db.prepare(SQL_QUERIES.VERIFY_PROJECT_EXISTS).get(project_id);
     if (!projectExists) {
@@ -31,9 +31,9 @@ export const createTask = async (req, res) => {
     }
 
     const insertStmt = db.prepare(SQL_QUERIES.INSERT_TASK);
-    
+
     const result = insertStmt.run(project_id, column_id, title, description, finalOrderIndex);
-    
+
     const task = {
       id: result.lastInsertRowid,
       project_id,
@@ -60,7 +60,7 @@ export const updateTask = async (req, res) => {
     }
 
     const db = getDatabase();
-    
+
     // Verify task exists and belongs to project
     const task = db.prepare(SQL_QUERIES.VERIFY_TASK_EXISTS).get(task_id, project_id);
     if (!task) {
@@ -68,7 +68,7 @@ export const updateTask = async (req, res) => {
     }
 
     // Get current task values to use as defaults
-    const currentTask = db.prepare('SELECT title, description, column_id, order_index FROM tasks WHERE id = ?').get(task_id);
+    const currentTask = db.prepare(SQL_QUERIES.SELECT_TASK_BY_ID).get(task_id);
     if (!currentTask) {
       return res.status(404).json({ error: 'Task not found' });
     }
@@ -84,9 +84,9 @@ export const updateTask = async (req, res) => {
     ];
 
     const updateStmt = db.prepare(SQL_QUERIES.UPDATE_TASK);
-    
+
     const result = updateStmt.run(...values);
-    
+
     if (result.changes === 0) {
       return res.status(500).json({ success: false, error: 'Failed to update task' });
     }
@@ -108,7 +108,7 @@ export const deleteTask = async (req, res) => {
     }
 
     const db = getDatabase();
-    
+
     // Verify task exists and belongs to project
     const task = db.prepare(SQL_QUERIES.VERIFY_TASK_EXISTS).get(task_id, project_id);
     if (!task) {
@@ -117,7 +117,7 @@ export const deleteTask = async (req, res) => {
 
     const deleteStmt = db.prepare(SQL_QUERIES.DELETE_TASK);
     const result = deleteStmt.run(task_id);
-    
+
     if (result.changes === 0) {
       return res.status(500).json({ success: false, error: 'Failed to delete task' });
     }
@@ -140,9 +140,9 @@ export const moveTask = async (req, res) => {
     }
 
     const db = getDatabase();
-    
+
     // Verify task exists
-    const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
+    const task = db.prepare(SQL_QUERIES.VERIFY_TASK_EXISTS_BY_ID).get(id);
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
@@ -154,9 +154,9 @@ export const moveTask = async (req, res) => {
     }
 
     const updateStmt = db.prepare(SQL_QUERIES.MOVE_TASK);
-    
+
     const result = updateStmt.run(new_column_id, new_order_index, id);
-    
+
     if (result.changes === 0) {
       return res.status(500).json({ error: 'Failed to move task' });
     }
@@ -166,4 +166,4 @@ export const moveTask = async (req, res) => {
     console.error('moveTask error:', error);
     res.status(500).json({ error: 'Failed to move task' });
   }
-}; 
+};

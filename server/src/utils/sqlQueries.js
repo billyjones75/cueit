@@ -2,10 +2,10 @@ export const SQL_QUERIES = {
   // ============================================================================
   // PROJECT QUERIES
   // ============================================================================
-  
+
   // Get all projects with columns and tasks
   SELECT_PROJECTS_WITH_COLUMNS_AND_TASKS: `
-    SELECT 
+    SELECT
       p.id,
       p.name,
       p.description,
@@ -39,14 +39,14 @@ export const SQL_QUERIES = {
 
   // Create new project
   INSERT_PROJECT: `
-    INSERT INTO projects (name, description) 
+    INSERT INTO projects (name, description)
     VALUES (?, ?)
   `,
 
   // Update project
   UPDATE_PROJECT: `
-    UPDATE projects 
-    SET name = COALESCE(?, name), 
+    UPDATE projects
+    SET name = COALESCE(?, name),
         description = COALESCE(?, description),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -59,7 +59,7 @@ export const SQL_QUERIES = {
 
   // Search project by name
   SEARCH_PROJECT_BY_NAME: `
-    SELECT 
+    SELECT
       p.id,
       p.name,
       p.description,
@@ -97,7 +97,7 @@ export const SQL_QUERIES = {
 
   // Get columns for a project with task count
   SELECT_COLUMNS_WITH_TASK_COUNT: `
-    SELECT 
+    SELECT
       c.id,
       c.name,
       c.order_index,
@@ -112,14 +112,14 @@ export const SQL_QUERIES = {
 
   // Create new column
   INSERT_COLUMN: `
-    INSERT INTO columns (project_id, name, order_index) 
+    INSERT INTO columns (project_id, name, order_index)
     VALUES (?, ?, ?)
   `,
 
   // Update column
   UPDATE_COLUMN: `
-    UPDATE columns 
-    SET name = COALESCE(?, name), 
+    UPDATE columns
+    SET name = COALESCE(?, name),
         order_index = COALESCE(?, order_index)
     WHERE id = ?
   `,
@@ -136,9 +136,9 @@ export const SQL_QUERIES = {
 
   // Get last column order index
   GET_LAST_COLUMN_ORDER_INDEX: `
-    SELECT order_index FROM columns 
-    WHERE project_id = ? 
-    ORDER BY order_index DESC 
+    SELECT order_index FROM columns
+    WHERE project_id = ?
+    ORDER BY order_index DESC
     LIMIT 1
   `,
 
@@ -153,13 +153,13 @@ export const SQL_QUERIES = {
 
   // Create new task
   INSERT_TASK: `
-    INSERT INTO tasks (project_id, column_id, title, description, order_index) 
+    INSERT INTO tasks (project_id, column_id, title, description, order_index)
     VALUES (?, ?, ?, ?, ?)
   `,
 
   // Update task
   UPDATE_TASK: `
-    UPDATE tasks 
+    UPDATE tasks
     SET title = COALESCE(?, title),
         description = COALESCE(?, description),
         column_id = COALESCE(?, column_id),
@@ -175,16 +175,16 @@ export const SQL_QUERIES = {
 
   // Move task
   MOVE_TASK: `
-    UPDATE tasks 
+    UPDATE tasks
     SET column_id = ?, order_index = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `,
 
   // Get last task order index in column
   GET_LAST_TASK_ORDER_INDEX: `
-    SELECT order_index FROM tasks 
-    WHERE column_id = ? 
-    ORDER BY order_index DESC 
+    SELECT order_index FROM tasks
+    WHERE column_id = ?
+    ORDER BY order_index DESC
     LIMIT 1
   `,
 
@@ -203,6 +203,26 @@ export const SQL_QUERIES = {
     SELECT id FROM tasks WHERE id = ? AND project_id = ?
   `,
 
+  // Verify task exists (without project check)
+  VERIFY_TASK_EXISTS_BY_ID: `
+    SELECT id FROM tasks WHERE id = ?
+  `,
+
+  // Get single task by ID
+  SELECT_TASK_BY_ID: `
+    SELECT
+      id,
+      title,
+      description,
+      column_id,
+      order_index,
+      project_id,
+      created_at,
+      updated_at
+    FROM tasks
+    WHERE id = ?
+  `,
+
   // Verify column exists
   VERIFY_COLUMN_EXISTS_BY_ID: `
     SELECT id FROM columns WHERE id = ?
@@ -219,22 +239,22 @@ export const SQL_QUERIES = {
 
   // Get column by name and project
   GET_COLUMN_BY_NAME_AND_PROJECT: `
-    SELECT id FROM columns 
+    SELECT id FROM columns
     WHERE project_id = ? AND name = ?
   `,
 
   // Get tasks by column with limit (lightweight)
   GET_TASKS_BY_COLUMN: `
     SELECT title, description, order_index
-    FROM tasks 
-    WHERE column_id = ? 
-    ORDER BY order_index 
+    FROM tasks
+    WHERE column_id = ?
+    ORDER BY order_index
     LIMIT ?
   `,
 
   // Get tasks by name pattern (lightweight)
   GET_TASKS_BY_NAME_PATTERN: `
-    SELECT 
+    SELECT
       t.id,
       t.title,
       t.description,
@@ -249,8 +269,8 @@ export const SQL_QUERIES = {
   // Get projects with limit (lightweight)
   GET_PROJECTS_WITH_LIMIT: `
     SELECT name, description, created_at
-    FROM projects 
-    ORDER BY created_at DESC 
+    FROM projects
+    ORDER BY created_at DESC
     LIMIT ?
   `,
 
@@ -261,8 +281,8 @@ export const SQL_QUERIES = {
 
   // Get project columns (lightweight)
   GET_PROJECT_COLUMNS: `
-    SELECT id, name, order_index FROM columns 
-    WHERE project_id = ? 
+    SELECT id, name, order_index FROM columns
+    WHERE project_id = ?
     ORDER BY order_index
   `,
 
@@ -275,14 +295,14 @@ export const SQL_QUERIES = {
 
   // Get tasks by column for reordering
   GET_TASKS_BY_COLUMN_FOR_REORDER: `
-    SELECT order_index FROM tasks 
-    WHERE column_id = ? 
+    SELECT order_index FROM tasks
+    WHERE column_id = ?
     ORDER BY order_index
   `,
 
   // Get project summary (for list projects)
   GET_PROJECTS_SUMMARY: `
-    SELECT 
+    SELECT
       p.id,
       p.name,
       p.description,
@@ -298,7 +318,7 @@ export const SQL_QUERIES = {
 
   // Get tasks in column by status (for list tasks by status)
   GET_TASKS_IN_COLUMN_BY_STATUS: `
-    SELECT 
+    SELECT
       t.title,
       t.description,
       t.order_index
@@ -312,7 +332,7 @@ export const SQL_QUERIES = {
 
   // Find task by name in project
   FIND_TASK_BY_NAME_IN_PROJECT: `
-    SELECT 
+    SELECT
       t.id,
       t.title,
       t.description,
@@ -378,14 +398,93 @@ export const SQL_QUERIES = {
     )
   `,
 
+  // Create subtasks table
+  CREATE_SUBTASKS_TABLE: `
+    CREATE TABLE IF NOT EXISTS subtasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      completed BOOLEAN DEFAULT 0,
+      order_index INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+    )
+  `,
+
   // Create indexes
   CREATE_INDEXES: [
     `CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name)`,
     `CREATE INDEX IF NOT EXISTS idx_columns_project_id ON columns(project_id)`,
     `CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)`,
     `CREATE INDEX IF NOT EXISTS idx_tasks_column_id ON tasks(column_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id)`,
     `CREATE INDEX IF NOT EXISTS idx_mcp_integrations_client_name ON mcp_integrations(client_name)`
   ],
+
+  // ============================================================================
+  // SUBTASK QUERIES
+  // ============================================================================
+
+  // Get all subtasks for a task
+  SELECT_SUBTASKS_BY_TASK: `
+    SELECT
+      id,
+      task_id,
+      text,
+      completed,
+      order_index,
+      created_at,
+      updated_at
+    FROM subtasks
+    WHERE task_id = ?
+    ORDER BY order_index
+  `,
+
+  // Create new subtask
+  INSERT_SUBTASK: `
+    INSERT INTO subtasks (task_id, text, completed, order_index)
+    VALUES (?, ?, ?, ?)
+  `,
+
+  // Update subtask
+  UPDATE_SUBTASK: `
+    UPDATE subtasks
+    SET text = COALESCE(?, text),
+        completed = COALESCE(?, completed),
+        order_index = COALESCE(?, order_index),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `,
+
+  // Get single subtask by ID
+  SELECT_SUBTASK_BY_ID: `
+    SELECT
+      id,
+      task_id,
+      text,
+      completed,
+      order_index,
+      created_at,
+      updated_at
+    FROM subtasks
+    WHERE id = ?
+  `,
+
+  // Verify subtask exists and belongs to task
+  VERIFY_SUBTASK_EXISTS: `
+    SELECT id FROM subtasks WHERE id = ? AND task_id = ?
+  `,
+
+  // Verify subtask exists (without task check)
+  VERIFY_SUBTASK_EXISTS_BY_ID: `
+    SELECT id FROM subtasks WHERE id = ?
+  `,
+
+  // Delete subtask
+  DELETE_SUBTASK: `
+    DELETE FROM subtasks WHERE id = ?
+  `,
 
   // ============================================================================
   // MCP INTEGRATION QUERIES
@@ -398,7 +497,7 @@ export const SQL_QUERIES = {
     ON CONFLICT(client_name) DO UPDATE SET
       call_count = call_count + 1,
       updated_at = CURRENT_TIMESTAMP
-    RETURNING 
+    RETURNING
       id,
       client_name,
       call_count,
@@ -408,7 +507,7 @@ export const SQL_QUERIES = {
 
   // Get all MCP integrations
   GET_ALL_MCP_INTEGRATIONS: `
-    SELECT 
+    SELECT
       id,
       client_name,
       call_count,
@@ -419,4 +518,4 @@ export const SQL_QUERIES = {
   `,
 
 
-}; 
+};

@@ -9,6 +9,7 @@ import { initDatabase } from './utils/database.js';
 import projectsRouter from './routes/projects.js';
 import tasksRouter from './routes/tasks.js';
 import columnsRouter from './routes/columns.js';
+import subtasksRouter from './routes/subtasks.js';
 import mcpRouter from './routes/mcp.js';
 import integrationsRouter from './routes/integrations.js';
 
@@ -51,6 +52,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/projects', projectsRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/columns', columnsRouter);
+app.use('/api/tasks/:task_id/subtasks', subtasksRouter);
 app.use('/mcp', mcpRouter);
 app.use('/api/integrations', integrationsRouter);
 
