@@ -77,13 +77,14 @@ export function ProjectPropertiesModal({
       }}
       fields={[
         {
+          type: 'editable',
           label: "Description",
           value: projectDescription,
           onSave: async (value) => {
             setProjectDescription(value);
             await handleSave(projectName, value);
           },
-          type: 'textarea',
+          fieldType: 'textarea',
           rows: 4
         }
       ]}

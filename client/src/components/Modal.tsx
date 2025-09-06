@@ -83,7 +83,7 @@ export function Modal({ isOpen, onClose, title, fields, actions, onTitleChange }
 
           {/* Fields */}
           {fields.map((field, index) => (
-            <ModalField key={index} field={field} />
+            <ModalField key={field.label || index} field={field} />
           ))}
 
           {/* Actions */}

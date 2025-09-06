@@ -34,6 +34,7 @@ export function TaskModal({ isOpen, onClose, task, onTaskUpdate, onTaskDelete }:
       }}
       fields={[
         {
+          type: 'editable',
           label: "Description",
           value: task.description,
           onSave: async (value) => {
@@ -45,7 +46,7 @@ export function TaskModal({ isOpen, onClose, task, onTaskUpdate, onTaskDelete }:
               alert('Failed to update task description');
             }
           },
-          type: 'textarea',
+          fieldType: 'textarea',
           rows: 2
         }
       ]}

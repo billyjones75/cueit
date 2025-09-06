@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Check, Plus, Trash2, Edit3 } from 'lucide-react';
+import { BaseModalField } from './ModalField';
 
 export interface ChecklistItem {
   id: string;
@@ -9,7 +10,8 @@ export interface ChecklistItem {
   orderIndex: number;
 }
 
-export interface ChecklistProps {
+export interface ChecklistModalField extends BaseModalField {
+  type: 'checklist';
   items: ChecklistItem[];
   onAddItem?: (text: string) => void;
   onUpdateItem?: (id: string, updates: Partial<ChecklistItem>) => void;
@@ -20,7 +22,7 @@ export interface ChecklistProps {
   addButtonText?: string;
 }
 
-export function Checklist({
+export function ChecklistModalField({
   items,
   onAddItem,
   onUpdateItem,
@@ -28,8 +30,10 @@ export function Checklist({
   onReorderItems,
   className = '',
   placeholder = 'Add new item...',
-  addButtonText = 'Add Item'
-}: ChecklistProps) {
+  addButtonText = 'Add Item',
+  type,
+  label
+}: ChecklistModalField) {
   const [newItemText, setNewItemText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -103,7 +107,9 @@ export function Checklist({
   const sortedItems = [...items].sort((a, b) => a.orderIndex - b.orderIndex);
 
   return (
-    <div className={`checklist ${className}`}>
+    <div className="mb-8">
+      <div className="font-semibold text-lg text-gray-800 mb-4">{label}</div>
+      <div className={`checklist ${className}`}>
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="checklist">
           {(provided) => (
@@ -210,6 +216,7 @@ export function Checklist({
           <Plus size={16} />
           {addButtonText}
         </button>
+      </div>
       </div>
     </div>
   );
