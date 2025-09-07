@@ -12,6 +12,7 @@ import columnsRouter from './routes/columns.js';
 import subtasksRouter from './routes/subtasks.js';
 import mcpRouter from './routes/mcp.js';
 import integrationsRouter from './routes/integrations.js';
+import historyRouter from './routes/history.js';
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/columns', columnsRouter);
 app.use('/api/tasks/:task_id/subtasks', subtasksRouter);
 app.use('/mcp', mcpRouter);
 app.use('/api/integrations', integrationsRouter);
+app.use('/api/history', historyRouter);
 
 // Serve static files from the React app build
 app.use(express.static(path.join(__dirname, '../../client/dist')));

@@ -91,6 +91,12 @@ export const SQL_QUERIES = {
     GROUP BY p.id
   `,
 
+  // Get single project by ID
+  SELECT_PROJECT_BY_ID: `
+    SELECT id, name, description, created_at, updated_at
+    FROM projects WHERE id = ?
+  `,
+
   // ============================================================================
   // COLUMN QUERIES
   // ============================================================================
@@ -108,6 +114,13 @@ export const SQL_QUERIES = {
     WHERE c.project_id = ?
     GROUP BY c.id
     ORDER BY c.order_index
+  `,
+
+  // Get all columns for a project
+  SELECT_COLUMNS_BY_PROJECT: `
+    SELECT id, project_id, name, order_index, created_at
+    FROM columns WHERE project_id = ?
+    ORDER BY order_index
   `,
 
   // Create new column
@@ -221,6 +234,13 @@ export const SQL_QUERIES = {
       updated_at
     FROM tasks
     WHERE id = ?
+  `,
+
+  // Get all tasks for a project
+  SELECT_TASKS_BY_PROJECT: `
+    SELECT id, project_id, column_id, title, description, order_index, created_at, updated_at
+    FROM tasks WHERE project_id = ?
+    ORDER BY column_id, order_index
   `,
 
   // Verify column exists
@@ -412,6 +432,18 @@ export const SQL_QUERIES = {
     )
   `,
 
+  // Create project history table
+  CREATE_PROJECT_HISTORY_TABLE: `
+    CREATE TABLE IF NOT EXISTS project_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      snapshot TEXT NOT NULL,
+      description TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+    )
+  `,
+
   // Create indexes
   CREATE_INDEXES: [
     `CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name)`,
@@ -419,7 +451,9 @@ export const SQL_QUERIES = {
     `CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)`,
     `CREATE INDEX IF NOT EXISTS idx_tasks_column_id ON tasks(column_id)`,
     `CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_mcp_integrations_client_name ON mcp_integrations(client_name)`
+    `CREATE INDEX IF NOT EXISTS idx_mcp_integrations_client_name ON mcp_integrations(client_name)`,
+    `CREATE INDEX IF NOT EXISTS idx_project_history_project_id ON project_history(project_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_project_history_created_at ON project_history(created_at)`
   ],
 
   // ============================================================================
@@ -506,6 +540,60 @@ export const SQL_QUERIES = {
     WHERE s.task_id = ? AND s.title LIKE ?
     ORDER BY s.order_index
     LIMIT 1
+  `,
+
+  // Get all subtasks for a project
+  SELECT_SUBTASKS_BY_PROJECT: `
+    SELECT id, task_id, title, completed, order_index, created_at, updated_at
+    FROM subtasks WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)
+    ORDER BY task_id, order_index
+  `,
+
+  // ============================================================================
+  // PROJECT HISTORY QUERIES
+  // ============================================================================
+
+  // Create new project history entry
+  INSERT_PROJECT_HISTORY: `
+    INSERT INTO project_history (project_id, snapshot, description)
+    VALUES (?, ?, ?)
+  `,
+
+  // Get project history for a project
+  SELECT_PROJECT_HISTORY: `
+    SELECT
+      id,
+      project_id,
+      description,
+      created_at
+    FROM project_history
+    WHERE project_id = ?
+    ORDER BY created_at DESC
+    LIMIT ?
+  `,
+
+  // Get specific project history entry with snapshot
+  SELECT_PROJECT_HISTORY_BY_ID: `
+    SELECT
+      id,
+      project_id,
+      snapshot,
+      description,
+      created_at
+    FROM project_history
+    WHERE id = ?
+  `,
+
+  // Delete old project history entries (keep only latest N)
+  DELETE_OLD_PROJECT_HISTORY: `
+    DELETE FROM project_history
+    WHERE project_id = ?
+    AND id NOT IN (
+      SELECT id FROM project_history
+      WHERE project_id = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    )
   `,
 
   // ============================================================================

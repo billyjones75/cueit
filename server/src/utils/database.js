@@ -20,6 +20,7 @@ export const initDatabase = () => {
     db.exec(SQL_QUERIES.CREATE_TASKS_TABLE);
     db.exec(SQL_QUERIES.CREATE_SUBTASKS_TABLE);
     db.exec(SQL_QUERIES.CREATE_MCP_INTEGRATIONS_TABLE);
+    db.exec(SQL_QUERIES.CREATE_PROJECT_HISTORY_TABLE);
     
     // Create indexes
     SQL_QUERIES.CREATE_INDEXES.forEach(indexQuery => {
