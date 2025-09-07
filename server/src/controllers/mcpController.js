@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { getDatabase } from '../utils/database.js';
 import { SQL_QUERIES } from '../utils/sqlQueries.js';
+import { saveProjectVersion } from './historyController.js';
 
 // Initialize MCP Server
 const mcpServer = new McpServer({
@@ -38,13 +39,13 @@ const withUser = async (req, handler) => {
 const trackMcpClient = async (req) => {
   try {
     const db = getDatabase();
-    
+
     // Extract client information from request headers or generate a unique ID
     const clientName = req.headers['mcp-client'] || 'Unknown Client';
-    
+
     // Track the MCP client connection
     const integration = db.prepare(SQL_QUERIES.GET_OR_CREATE_MCP_INTEGRATION).get(clientName);
-    
+
     return integration;
   } catch (error) {
     console.error('Error tracking MCP client:', error);
@@ -56,87 +57,87 @@ const trackMcpClient = async (req) => {
 // Database helper functions
 const createProjectWithDefaultColumns = async (name, description) => {
   const db = getDatabase();
-  
+
   const insertProject = db.prepare(SQL_QUERIES.INSERT_PROJECT);
   const result = insertProject.run(name, description);
   const projectId = result.lastInsertRowid;
-  
+
   const defaultColumns = [
     { name: 'To Do', orderIndex: 1000 },
     { name: 'In Progress', orderIndex: 2000 },
     { name: 'Done', orderIndex: 3000 }
   ];
-  
+
   const insertColumn = db.prepare(SQL_QUERIES.INSERT_COLUMN);
   defaultColumns.forEach(column => {
     insertColumn.run(projectId, column.name, column.orderIndex);
   });
-  
+
   return projectId;
 };
 
 const createTaskInProject = async (projectName, columnName, title, description) => {
   const db = getDatabase();
-  
+
   const project = db.prepare(SQL_QUERIES.GET_PROJECT_BY_NAME).get(projectName);
   if (!project) {
     throw new Error(`Project not found: ${projectName}`);
   }
-  
+
   const column = db.prepare(SQL_QUERIES.GET_COLUMN_BY_NAME_AND_PROJECT).get(project.id, columnName);
   if (!column) {
     throw new Error(`Column not found: ${columnName}`);
   }
-  
+
   const lastTask = db.prepare(SQL_QUERIES.GET_LAST_TASK_ORDER_INDEX).get(column.id);
   const orderIndex = (lastTask ? lastTask.order_index : 0) + 1000;
-  
+
   const insertTask = db.prepare(SQL_QUERIES.INSERT_TASK);
   const result = insertTask.run(project.id, column.id, title, description, orderIndex);
-  
-  return result.lastInsertRowid;
+
+  return { taskId: result.lastInsertRowid, projectId: project.id };
 };
 
 const createSubtaskForTask = async (projectName, taskName, subtaskTitle) => {
   const db = getDatabase();
-  
+
   const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
   if (!task) {
     throw new Error(`Task not found: ${taskName} in project ${projectName}`);
   }
-  
+
   const lastSubtask = db.prepare(SQL_QUERIES.GET_LAST_SUBTASK_ORDER_INDEX).get(task.id);
   const orderIndex = (lastSubtask ? lastSubtask.order_index : 0) + 1000;
-  
+
   const insertSubtask = db.prepare(SQL_QUERIES.INSERT_SUBTASK);
   const result = insertSubtask.run(task.id, subtaskTitle, 0, orderIndex);
-  
+
   return result.lastInsertRowid;
 };
 
 const createBulkSubtasksForTask = async (projectName, taskName, subtaskTitles) => {
   const db = getDatabase();
-  
+
   const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
   if (!task) {
     throw new Error(`Task not found: ${taskName} in project ${projectName}`);
   }
-  
+
   if (!subtaskTitles || subtaskTitles.length === 0) {
     throw new Error('No subtasks provided');
   }
-  
+
   if (subtaskTitles.length > 50) {
     throw new Error('Cannot create more than 50 subtasks at once');
   }
-  
+
   const insertSubtask = db.prepare(SQL_QUERIES.INSERT_SUBTASK);
   const createdSubtasks = [];
   let successCount = 0;
-  
+
   let lastSubtask = db.prepare(SQL_QUERIES.GET_LAST_SUBTASK_ORDER_INDEX).get(task.id);
   let currentOrderIndex = (lastSubtask ? lastSubtask.order_index : 0);
-  
+
   for (const subtaskTitle of subtaskTitles) {
     try {
       currentOrderIndex += 1000;
@@ -150,76 +151,76 @@ const createBulkSubtasksForTask = async (projectName, taskName, subtaskTitles) =
       console.error(`Failed to create subtask "${subtaskTitle}":`, error.message);
     }
   }
-  
+
   return { successCount, createdSubtasks, totalRequested: subtaskTitles.length };
 };
 
 const updateSubtaskInTask = async (projectName, taskName, subtaskTitle, updates) => {
   const db = getDatabase();
-  
+
   const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
   if (!task) {
     throw new Error(`Task not found: ${taskName} in project ${projectName}`);
   }
-  
+
   const subtask = db.prepare(SQL_QUERIES.FIND_SUBTASK_BY_TITLE_IN_TASK).get(task.id, `%${subtaskTitle}%`);
   if (!subtask) {
     throw new Error(`Subtask not found: ${subtaskTitle} in task ${taskName}`);
   }
-  
+
   const updateData = {};
   if (updates.title !== undefined) updateData.title = updates.title;
   if (updates.order_index !== undefined) updateData.order_index = updates.order_index;
-  
+
   if (Object.keys(updateData).length === 0) {
     throw new Error('No fields to update');
   }
-  
+
   const updateFields = [];
   const values = [];
-  
-  if (updateData.title !== undefined) { 
-    updateFields.push('title = ?'); 
-    values.push(updateData.title); 
+
+  if (updateData.title !== undefined) {
+    updateFields.push('title = ?');
+    values.push(updateData.title);
   }
-  if (updateData.order_index !== undefined) { 
-    updateFields.push('order_index = ?'); 
-    values.push(updateData.order_index); 
+  if (updateData.order_index !== undefined) {
+    updateFields.push('order_index = ?');
+    values.push(updateData.order_index);
   }
-  
+
   updateFields.push('updated_at = CURRENT_TIMESTAMP');
   values.push(subtask.id);
-  
+
   const updateStmt = db.prepare(`UPDATE subtasks SET ${updateFields.join(', ')} WHERE id = ?`);
   const result = updateStmt.run(...values);
-  
+
   if (result.changes === 0) {
     throw new Error('Failed to update subtask');
   }
-  
+
   return subtask.id;
 };
 
 const deleteSubtaskFromTask = async (projectName, taskName, subtaskTitle) => {
   const db = getDatabase();
-  
+
   const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(projectName, `%${taskName}%`);
   if (!task) {
     throw new Error(`Task not found: ${taskName} in project ${projectName}`);
   }
-  
+
   const subtask = db.prepare(SQL_QUERIES.FIND_SUBTASK_BY_TITLE_IN_TASK).get(task.id, `%${subtaskTitle}%`);
   if (!subtask) {
     throw new Error(`Subtask not found: ${subtaskTitle} in task ${taskName}`);
   }
-  
+
   const deleteStmt = db.prepare(SQL_QUERIES.DELETE_SUBTASK);
   const result = deleteStmt.run(subtask.id);
-  
+
   if (result.changes === 0) {
     throw new Error('Failed to delete subtask');
   }
-  
+
   return subtask.id;
 };
 
@@ -239,11 +240,11 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const db = getDatabase();
-        
+
         const tasks = db.prepare(SQL_QUERIES.GET_TASKS_IN_COLUMN_BY_STATUS).all(project_name, status, limit);
-        
+
         let resultText = `Top ${tasks.length} tasks in "${status}" status for project "${project_name}":\n\n`;
-        
+
         if (tasks.length === 0) {
           resultText += `No tasks found in "${status}" status.`;
         } else {
@@ -255,7 +256,7 @@ mcpServer.registerTool(
             resultText += `   Order: ${task.order_index}\n\n`;
           });
         }
-        
+
         return createResponse(resultText);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -278,9 +279,9 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const db = getDatabase();
-        
+
         const tasks = db.prepare(SQL_QUERIES.GET_TASKS_BY_NAME_PATTERN).all(`%${task_name}%`);
-        
+
         if (tasks.length === 0) {
           return createResponse(`No tasks found with name containing: ${task_name}`);
         }
@@ -289,17 +290,17 @@ mcpServer.registerTool(
         let detailsText = `Task Details:\n\n`;
         detailsText += `Title: ${task.title}\n`;
         detailsText += `Project: ${task.project_name}\n`;
-        
+
         if (task.description) {
           detailsText += `Description: ${task.description}\n`;
         }
-        
+
         detailsText += `Status: ${task.column_name}\n`;
-        
+
         if (tasks.length > 1) {
           detailsText += `\nNote: Found ${tasks.length} matching tasks. Showing details for the first match.`;
         }
-        
+
         return createResponse(detailsText);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -322,7 +323,7 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const db = getDatabase();
-        
+
         const projects = db.prepare(SQL_QUERIES.GET_PROJECTS_SUMMARY).all();
         const limitedProjects = projects.slice(0, limit);
 
@@ -335,7 +336,7 @@ mcpServer.registerTool(
           resultText += `   Columns: ${project.column_count}\n`;
           resultText += `   Total Tasks: ${project.total_tasks}\n\n`;
         });
-        
+
         return createResponse(resultText);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -383,8 +384,8 @@ mcpServer.registerTool(
   async ({ project_name, column_name, title, description }, req) => {
     return withUser(req, async (userData) => {
       try {
-        const taskId = await createTaskInProject(project_name, column_name, title, description || '');
-        return createResponse(`Task "${title}" created successfully in project "${project_name}" column "${column_name}" with ID ${taskId}`);
+        const result = await createTaskInProject(project_name, column_name, title, description || '');
+        return createResponse(`Task "${title}" created successfully in project "${project_name}" column "${column_name}" with ID ${result.taskId}`);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
       }
@@ -419,13 +420,21 @@ mcpServer.registerTool(
         }
 
         let successCount = 0;
+        let projectId = null;
+
         for (const task of tasks) {
           try {
-            await createTaskInProject(project_name, column_name, task.title, task.description || '');
+            const result = await createTaskInProject(project_name, column_name, task.title, task.description || '');
+            if (!projectId) projectId = result.projectId;
             successCount++;
           } catch (error) {
             console.error(`Failed to create task "${task.title}":`, error.message);
           }
+        }
+
+        // Create single version history entry for bulk operation
+        if (successCount > 0 && projectId) {
+          await saveProjectVersion(projectId, `Bulk created ${successCount} tasks via MCP in "${column_name}"`);
         }
 
         return createResponse(`Successfully created ${successCount} out of ${tasks.length} task(s) in project "${project_name}" column "${column_name}"`);
@@ -456,7 +465,7 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const db = getDatabase();
-        
+
         const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(project_name, `%${task_name}%`);
         if (!task) {
           throw new Error(`Task not found: ${task_name}`);
@@ -471,13 +480,13 @@ mcpServer.registerTool(
           if (!newColumn) {
             throw new Error(`Column not found: ${updates.column_name}`);
           }
-          
+
           if (newColumn.id === task.column_id) {
             throw new Error(`Task is already in status "${updates.column_name}"`);
           }
-          
+
           updateData.column_id = newColumn.id;
-          
+
           const lastTask = db.prepare(SQL_QUERIES.GET_LAST_TASK_ORDER_INDEX).get(newColumn.id);
           updateData.order_index = (lastTask ? lastTask.order_index : 0) + 1000;
         }
@@ -488,27 +497,27 @@ mcpServer.registerTool(
 
         const updateFields = [];
         const values = [];
-        
+
         if (updateData.title !== undefined) { updateFields.push('title = ?'); values.push(updateData.title); }
         if (updateData.description !== undefined) { updateFields.push('description = ?'); values.push(updateData.description); }
         if (updateData.column_id !== undefined) { updateFields.push('column_id = ?'); values.push(updateData.column_id); }
         if (updateData.order_index !== undefined) { updateFields.push('order_index = ?'); values.push(updateData.order_index); }
-        
+
         updateFields.push('updated_at = CURRENT_TIMESTAMP');
         values.push(task.id);
-        
+
         const updateStmt = db.prepare(`UPDATE tasks SET ${updateFields.join(', ')} WHERE id = ?`);
         const result = updateStmt.run(...values);
-        
+
         if (result.changes === 0) {
           throw new Error('Failed to update task');
         }
-        
+
         let successMessage = `Task "${task_name}" updated successfully in project "${project_name}"`;
         if (updates.column_name !== undefined) {
           successMessage += ` and moved to status "${updates.column_name}"`;
         }
-        
+
         return createResponse(successMessage);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -532,7 +541,7 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const db = getDatabase();
-        
+
         const task = db.prepare(SQL_QUERIES.FIND_TASK_BY_NAME_IN_PROJECT).get(project_name, `%${task_name}%`);
         if (!task) {
           throw new Error(`Task not found: ${task_name}`);
@@ -540,11 +549,17 @@ mcpServer.registerTool(
 
         const deleteStmt = db.prepare(SQL_QUERIES.DELETE_TASK);
         const result = deleteStmt.run(task.id);
-        
+
         if (result.changes === 0) {
           throw new Error('Failed to delete task');
         }
-        
+
+        // Create version history entry
+        const project = db.prepare(SQL_QUERIES.GET_PROJECT_BY_NAME).get(project_name);
+        if (project) {
+          await saveProjectVersion(project.id, `Task deleted via MCP: "${task.title}"`);
+        }
+
         return createResponse(`Task "${task_name}" deleted successfully from project "${project_name}"`);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -593,17 +608,26 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const result = await createBulkSubtasksForTask(project_name, task_name, subtask_titles);
-        
+
+        // Create version history entry for bulk subtask creation
+        if (result.successCount > 0) {
+          const db = getDatabase();
+          const project = db.prepare(SQL_QUERIES.GET_PROJECT_BY_NAME).get(project_name);
+          if (project) {
+            await saveProjectVersion(project.id, `Bulk created ${result.successCount} subtasks via MCP for task "${task_name}"`);
+          }
+        }
+
         let responseText = `Successfully created ${result.successCount} out of ${result.totalRequested} subtask(s) for task "${task_name}" in project "${project_name}"`;
-        
+
         if (result.createdSubtasks.length > 0) {
           responseText += `:\n\n${result.createdSubtasks.map((subtask, index) => `${index + 1}. ${subtask.title} (ID: ${subtask.id})`).join('\n')}`;
         }
-        
+
         if (result.successCount < result.totalRequested) {
           responseText += `\n\nNote: ${result.totalRequested - result.successCount} subtask(s) failed to create. Check server logs for details.`;
         }
-        
+
         return createResponse(responseText);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -632,9 +656,9 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const subtaskId = await updateSubtaskInTask(project_name, task_name, subtask_title, updates);
-        
+
         let successMessage = `Subtask "${subtask_title}" updated successfully in task "${task_name}" (project "${project_name}")`;
-        
+
         const updateDetails = [];
         if (updates.title !== undefined) {
           updateDetails.push(`title changed to "${updates.title}"`);
@@ -642,11 +666,11 @@ mcpServer.registerTool(
         if (updates.order_index !== undefined) {
           updateDetails.push(`position changed to ${updates.order_index}`);
         }
-        
+
         if (updateDetails.length > 0) {
           successMessage += ` - ${updateDetails.join(', ')}`;
         }
-        
+
         return createResponse(successMessage);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -671,6 +695,14 @@ mcpServer.registerTool(
     return withUser(req, async (userData) => {
       try {
         const subtaskId = await deleteSubtaskFromTask(project_name, task_name, subtask_title);
+
+        // Create version history entry for subtask deletion
+        const db = getDatabase();
+        const project = db.prepare(SQL_QUERIES.GET_PROJECT_BY_NAME).get(project_name);
+        if (project) {
+          await saveProjectVersion(project.id, `Subtask deleted via MCP: "${subtask_title}" from task "${task_name}"`);
+        }
+
         return createResponse(`Subtask "${subtask_title}" deleted successfully from task "${task_name}" in project "${project_name}" (ID: ${subtaskId})`);
       } catch (error) {
         return createResponse(`Error: ${error.message}`);
@@ -684,7 +716,7 @@ export const mcp = async (req, res) => {
   try {
     // Track MCP client connection
     const integration = await trackMcpClient(req);
-    
+
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
 
     res.on('close', () => {
@@ -693,7 +725,7 @@ export const mcp = async (req, res) => {
     });
 
     await mcpServer.connect(transport);
-    
+
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
     res.status(500).json({ error: 'MCP server error' });
