@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Check, Plus, Trash2, Edit3 } from 'lucide-react';
+import { Check, Plus, Trash2, Edit3, Copy } from 'lucide-react';
 import { BaseModalField } from './ModalField';
 import { getInsertIndex } from '../utils/fractionalIndexing';
 
@@ -87,6 +87,14 @@ export function ChecklistModalField({
   const handleDeleteItem = (id: string) => {
     if (onDeleteItem) {
       onDeleteItem(id);
+    }
+  };
+
+  const handleCopyItem = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
     }
   };
 
@@ -186,6 +194,13 @@ export function ChecklistModalField({
                           title="Edit item"
                         >
                           <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleCopyItem(item.text)}
+                          className="p-1 text-gray-400 hover:text-green-500 transition-colors duration-150"
+                          title="Copy item"
+                        >
+                          <Copy size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteItem(item.id)}
