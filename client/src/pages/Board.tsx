@@ -207,6 +207,16 @@ function Board() {
     }
   };
 
+  const handleRestore = async () => {
+    if (!board) return;
+    try {
+      await fetchProjects();
+    } catch (error) {
+      console.error('Error refreshing after restore:', error);
+      window.location.reload();
+    }
+  };
+
   // First thing that happens when the page loads
   useEffect(() => {
     setIsLoading(true);
@@ -471,6 +481,7 @@ function Board() {
           onClose={() => setShowVersionHistoryModal(false)}
           projectId={board.projectId}
           projectName={board.projectName}
+          onRestore={handleRestore}
         />
       )}
       

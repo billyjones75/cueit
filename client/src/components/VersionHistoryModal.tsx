@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, FileText } from 'lucide-react';
+import { X, Clock, FileText, RotateCcw } from 'lucide-react';
 import { historyApi } from '../api/api';
 
 interface VersionHistoryItem {
@@ -14,12 +14,14 @@ interface VersionHistoryModalProps {
   onClose: () => void;
   projectId: number;
   projectName: string;
+  onRestore?: () => void;
 }
 
-export function VersionHistoryModal({ isOpen, onClose, projectId, projectName }: VersionHistoryModalProps) {
+export function VersionHistoryModal({ isOpen, onClose, projectId, projectName, onRestore }: VersionHistoryModalProps) {
   const [versions, setVersions] = useState<VersionHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<number | null>(null);
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -37,6 +39,28 @@ export function VersionHistoryModal({ isOpen, onClose, projectId, projectName }:
       setError(err instanceof Error ? err.message : 'Failed to fetch version history');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRestore = async (versionId: number, description: string) => {
+    if (!window.confirm(`Are you sure you want to restore to "${description}"?\n\nThis will replace the current project state.`)) {
+      return;
+    }
+
+    setRestoringId(versionId);
+    try {
+      await historyApi.restoreProjectVersion(projectId, versionId);
+      onClose();
+      if (onRestore) {
+        onRestore();
+      } else {
+        window.location.reload();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to restore version');
+      console.error('Restore error:', err);
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -126,9 +150,23 @@ export function VersionHistoryModal({ isOpen, onClose, projectId, projectName }:
                         <p className="text-sm font-medium text-gray-900">
                           {version.description}
                         </p>
-                        <span className="text-xs text-gray-500 flex-shrink-0 ml-4">
-                          {formatDate(version.created_at)}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500 flex-shrink-0">
+                            {formatDate(version.created_at)}
+                          </span>
+                          <button
+                            onClick={() => handleRestore(version.id, version.description)}
+                            disabled={restoringId === version.id}
+                            className="p-2 text-blue-600 bg-blue-50 hover:text-blue-700 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                            title="Restore to this version"
+                          >
+                            {restoringId === version.id ? (
+                              <div className="w-6 h-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                            ) : (
+                              <RotateCcw className="w-6 h-6" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <div className="mt-1 flex items-center space-x-2">
                         <Clock className="w-3 h-3 text-gray-400" />
