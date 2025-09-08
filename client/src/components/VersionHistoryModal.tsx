@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, FileText, RotateCcw } from 'lucide-react';
+import { X, Clock, FileText, RotateCcw, Save } from 'lucide-react';
 import { historyApi } from '../api/api';
 
 interface VersionHistoryItem {
@@ -22,6 +22,7 @@ export function VersionHistoryModal({ isOpen, onClose, projectId, projectName, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -39,6 +40,24 @@ export function VersionHistoryModal({ isOpen, onClose, projectId, projectName, o
       setError(err instanceof Error ? err.message : 'Failed to fetch version history');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const description = window.prompt('Enter a description for this version:');
+    if (!description || !description.trim()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await historyApi.saveCurrentProjectVersion(projectId, description.trim());
+      await fetchVersionHistory(); // Refresh the list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save version');
+      console.error('Save error:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -92,12 +111,27 @@ export function VersionHistoryModal({ isOpen, onClose, projectId, projectName, o
             <h2 className="text-xl font-semibold text-gray-900">Version History</h2>
             <p className="text-sm text-gray-600 mt-1">{projectName}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Save current version"
+            >
+              {saving ? (
+                <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span className="text-sm font-medium">Save Version</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         <div className="overflow-y-auto max-h-[calc(80vh-120px)]">

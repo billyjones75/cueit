@@ -269,6 +269,23 @@ export const historyApi = {
     }
 
     return await res.json();
+  },
+
+  async saveCurrentProjectVersion(projectId: number, description: string) {
+    const res = await fetch(`${window.location.origin}/api/history/${projectId}/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ description })
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(error);
+    }
+
+    return await res.json();
   }
 };
 

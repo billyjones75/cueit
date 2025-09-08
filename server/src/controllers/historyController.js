@@ -130,6 +130,33 @@ export const restoreProjectVersion = async (req, res) => {
   }
 };
 
+// POST /api/history/:projectId/save - Manually save current project state
+export const saveCurrentProjectVersion = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { description } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Missing project ID' });
+    }
+
+    if (!description || !description.trim()) {
+      return res.status(400).json({ error: 'Description is required' });
+    }
+
+    const success = await saveProjectVersion(projectId, description.trim());
+    
+    if (success) {
+      res.json({ success: true, message: 'Project version saved successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to save project version' });
+    }
+  } catch (error) {
+    console.error('saveCurrentProjectVersion error:', error);
+    res.status(500).json({ error: 'Failed to save project version' });
+  }
+};
+
 // Helper function to save project version
 export const saveProjectVersion = async (projectId, description) => {
   try {

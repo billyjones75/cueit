@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProjectHistory, restoreProjectVersion } from '../controllers/historyController.js';
+import { getProjectHistory, restoreProjectVersion, saveCurrentProjectVersion } from '../controllers/historyController.js';
 
 const router = express.Router();
 
@@ -8,5 +8,8 @@ router.get('/:projectId', getProjectHistory);
 
 // POST /api/history/:projectId/restore/:versionId - Restore project to a specific version
 router.post('/:projectId/restore/:versionId', restoreProjectVersion);
+
+// POST /api/history/:projectId/save - Manually save current project state
+router.post('/:projectId/save', saveCurrentProjectVersion);
 
 export default router;
