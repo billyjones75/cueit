@@ -1,5 +1,6 @@
 import { getDatabase } from '../utils/database.js';
 import { SQL_QUERIES } from '../utils/sqlQueries.js';
+import { generateProjectAbbreviation } from '../utils/abbreviationUtils.js';
 
 // GET /api/projects - Get all projects
 export const getProjects = async (req, res) => {
@@ -33,11 +34,14 @@ export const createProject = async (req, res) => {
 
     const db = getDatabase();
     
+    // Generate abbreviation
+    const abbreviation = generateProjectAbbreviation(name);
+
     // Start transaction
     const transaction = db.transaction(() => {
       // 1. Insert project
       const projectStmt = db.prepare(SQL_QUERIES.INSERT_PROJECT);
-      const projectResult = projectStmt.run(name, description);
+      const projectResult = projectStmt.run(name, description, abbreviation);
       const projectId = projectResult.lastInsertRowid;
 
       // 2. Insert columns (use provided columns or default empty columns)

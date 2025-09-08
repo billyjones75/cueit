@@ -5,12 +5,13 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  displayId?: string;
   fields: ModalFieldType[];
   actions?: React.ReactNode;
   onTitleChange?: (newTitle: string) => void;
 }
 
-export function Modal({ isOpen, onClose, title, fields, actions, onTitleChange }: ModalProps) {
+export function Modal({ isOpen, onClose, title, displayId, fields, actions, onTitleChange }: ModalProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(title);
 
@@ -77,6 +78,13 @@ export function Modal({ isOpen, onClose, title, fields, actions, onTitleChange }
                 title="Double-click to edit"
               >
                 {title}
+              </div>
+            )}
+            {displayId && (
+              <div className="mt-2">
+                <span className="bg-[#178366] text-white text-sm px-3 py-1 rounded-lg font-medium">
+                  {displayId}
+                </span>
               </div>
             )}
           </div>

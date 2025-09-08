@@ -22,6 +22,7 @@ export const SQL_QUERIES = {
                 'id', t.id,
                 'title', t.title,
                 'description', t.description,
+                'display_id', t.display_id,
                 'order_index', t.order_index
               )
             )
@@ -39,8 +40,8 @@ export const SQL_QUERIES = {
 
   // Create new project
   INSERT_PROJECT: `
-    INSERT INTO projects (name, description)
-    VALUES (?, ?)
+    INSERT INTO projects (name, description, abbreviation)
+    VALUES (?, ?, ?)
   `,
 
   // Update project
@@ -166,8 +167,19 @@ export const SQL_QUERIES = {
 
   // Create new task
   INSERT_TASK: `
+    INSERT INTO tasks (project_id, column_id, title, description, display_id, order_index)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `,
+
+  // Create new task without display_id (for initial insert)
+  INSERT_TASK_WITHOUT_DISPLAY_ID: `
     INSERT INTO tasks (project_id, column_id, title, description, order_index)
     VALUES (?, ?, ?, ?, ?)
+  `,
+
+  // Update task display_id
+  UPDATE_TASK_DISPLAY_ID: `
+    UPDATE tasks SET display_id = ? WHERE id = ?
   `,
 
   // Update task
@@ -206,6 +218,11 @@ export const SQL_QUERIES = {
     SELECT id FROM projects WHERE id = ?
   `,
 
+  // Get project abbreviation
+  GET_PROJECT_ABBREVIATION: `
+    SELECT abbreviation FROM projects WHERE id = ?
+  `,
+
   // Verify column exists and belongs to project
   VERIFY_COLUMN_EXISTS: `
     SELECT id FROM columns WHERE id = ? AND project_id = ?
@@ -221,12 +238,19 @@ export const SQL_QUERIES = {
     SELECT id FROM tasks WHERE id = ?
   `,
 
+
+  // Get task by display_id
+  GET_TASK_BY_DISPLAY_ID: `
+    SELECT * FROM tasks WHERE display_id = ?
+  `,
+
   // Get single task by ID
   SELECT_TASK_BY_ID: `
     SELECT
       id,
       title,
       description,
+      display_id,
       column_id,
       order_index,
       project_id,
@@ -238,7 +262,7 @@ export const SQL_QUERIES = {
 
   // Get all tasks for a project
   SELECT_TASKS_BY_PROJECT: `
-    SELECT id, project_id, column_id, title, description, order_index, created_at, updated_at
+    SELECT id, project_id, column_id, title, description, display_id, order_index, created_at, updated_at
     FROM tasks WHERE project_id = ?
     ORDER BY column_id, order_index
   `,
@@ -254,7 +278,7 @@ export const SQL_QUERIES = {
 
   // Get project by name (lightweight)
   GET_PROJECT_BY_NAME: `
-    SELECT id, name, description FROM projects WHERE name = ?
+    SELECT id, name, description, abbreviation FROM projects WHERE name = ?
   `,
 
   // Get column by name and project
@@ -374,6 +398,7 @@ export const SQL_QUERIES = {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       description TEXT,
+      abbreviation TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -399,6 +424,7 @@ export const SQL_QUERIES = {
       column_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       description TEXT,
+      display_id TEXT,
       order_index INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

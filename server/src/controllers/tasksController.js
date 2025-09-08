@@ -30,16 +30,32 @@ export const createTask = async (req, res) => {
       finalOrderIndex = (lastTask ? lastTask.order_index : 0) + 1000;
     }
 
-    const insertStmt = db.prepare(SQL_QUERIES.INSERT_TASK);
+    // Execute task creation in a transaction
+    const transaction = db.transaction(() => {
+      // First insert the task without display_id
+      const insertStmt = db.prepare(SQL_QUERIES.INSERT_TASK_WITHOUT_DISPLAY_ID);
+      const result = insertStmt.run(project_id, column_id, title, description, finalOrderIndex);
+      const taskId = result.lastInsertRowid;
 
-    const result = insertStmt.run(project_id, column_id, title, description, finalOrderIndex);
+      // Generate display_id using the task ID and update the task
+      const project = db.prepare(SQL_QUERIES.GET_PROJECT_ABBREVIATION).get(project_id);
+      const displayId = `${project.abbreviation}-${taskId}`;
+      
+      const updateStmt = db.prepare(SQL_QUERIES.UPDATE_TASK_DISPLAY_ID);
+      updateStmt.run(displayId, taskId);
+
+      return { taskId, displayId };
+    });
+
+    const { taskId, displayId } = transaction();
 
     const task = {
-      id: result.lastInsertRowid,
+      id: taskId,
       project_id,
       column_id,
       title,
       description,
+      display_id: displayId,
       order_index: finalOrderIndex
     };
 

@@ -11,6 +11,7 @@ type TaskModalProps = {
     id: number;
     title: string;
     description?: string;
+    display_id?: string;
     projectId: number;
   } | null;
   onTaskUpdate: (updates: { title?: string; description?: string }) => void;
@@ -55,6 +56,7 @@ export function TaskModal({ isOpen, onClose, task, onTaskUpdate, onTaskDelete }:
       isOpen={isOpen}
       onClose={onClose}
       title={task.title}
+      displayId={task.display_id}
       onTitleChange={async (newTitle) => {
         try {
           await taskApi.updateTask(task.projectId, task.id, { title: newTitle });

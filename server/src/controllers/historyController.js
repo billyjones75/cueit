@@ -95,6 +95,7 @@ export const restoreProjectVersion = async (req, res) => {
                 newColumnId,
                 task.title,
                 task.description,
+                task.display_id,
                 task.order_index
               );
               taskIdMap[task.id] = result.lastInsertRowid;

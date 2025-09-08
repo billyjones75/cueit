@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { getDatabase } from '../utils/database.js';
 import { SQL_QUERIES } from '../utils/sqlQueries.js';
+import { generateProjectAbbreviation } from '../utils/abbreviationUtils.js';
 import { saveProjectVersion } from './historyController.js';
 
 // Initialize MCP Server
@@ -58,8 +59,9 @@ const trackMcpClient = async (req) => {
 const createProjectWithDefaultColumns = async (name, description) => {
   const db = getDatabase();
 
+  const abbreviation = generateProjectAbbreviation(name);
   const insertProject = db.prepare(SQL_QUERIES.INSERT_PROJECT);
-  const result = insertProject.run(name, description);
+  const result = insertProject.run(name, description, abbreviation);
   const projectId = result.lastInsertRowid;
 
   const defaultColumns = [
@@ -92,10 +94,24 @@ const createTaskInProject = async (projectName, columnName, title, description) 
   const lastTask = db.prepare(SQL_QUERIES.GET_LAST_TASK_ORDER_INDEX).get(column.id);
   const orderIndex = (lastTask ? lastTask.order_index : 0) + 1000;
 
-  const insertTask = db.prepare(SQL_QUERIES.INSERT_TASK);
-  const result = insertTask.run(project.id, column.id, title, description, orderIndex);
+  // Execute task creation in a transaction
+  const transaction = db.transaction(() => {
+    // First insert the task without display_id
+    const insertTask = db.prepare(SQL_QUERIES.INSERT_TASK_WITHOUT_DISPLAY_ID);
+    const result = insertTask.run(project.id, column.id, title, description, orderIndex);
+    const taskId = result.lastInsertRowid;
 
-  return { taskId: result.lastInsertRowid, projectId: project.id };
+    // Generate display_id using the task ID and update the task
+    const displayId = `${project.abbreviation}-${taskId}`;
+    const updateStmt = db.prepare(SQL_QUERIES.UPDATE_TASK_DISPLAY_ID);
+    updateStmt.run(displayId, taskId);
+
+    return { taskId, displayId };
+  });
+
+  const { taskId, displayId } = transaction();
+
+  return { taskId, projectId: project.id, displayId };
 };
 
 const createSubtaskForTask = async (projectName, taskName, subtaskTitle) => {

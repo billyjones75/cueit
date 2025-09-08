@@ -96,7 +96,7 @@ function Board() {
           ...prevBoard,
           columns: prevBoard.columns.map(col => 
             col.id === columnId 
-              ? { ...col, cards: [...col.cards, { id: newTask.id, title: newTask.title, description: newTask.description, orderIndex: newOrderIndex }] }
+              ? { ...col, cards: [...col.cards, { id: newTask.id, title: newTask.title, description: newTask.description, display_id: newTask.display_id, orderIndex: newOrderIndex }] }
               : col
           )
         };
@@ -123,6 +123,7 @@ function Board() {
           id: task.id,
           title: task.title,
           description: task.description,
+          display_id: task.display_id,
           orderIndex: task.order_index || 0
         }))
     }))
@@ -456,6 +457,7 @@ function Board() {
             id: selectedCard.id,
             title: selectedCard.title,
             description: selectedCard.description,
+            display_id: selectedCard.display_id,
             projectId: board.projectId
           }}
           onTaskUpdate={handleTaskUpdate}
