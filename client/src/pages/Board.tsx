@@ -10,9 +10,10 @@ import { getNewCardIndex, getInsertIndex } from '../utils/fractionalIndexing';
 import { ProjectPropertiesModal } from '../components/ProjectPropertiesModal';
 import { NewProjectModal } from '../components/NewProjectModal';
 import { MCPIntegrationModal } from '../components/MCPIntegrationModal';
+import { VersionHistoryModal } from '../components/VersionHistoryModal';
 import { CardType } from '../components/Card';
 import { Column, ColumnType } from '../components/Column';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, History, Edit } from 'lucide-react';
 
 type BoardType = {
   projectId: number;
@@ -36,6 +37,7 @@ function Board() {
   const [isMcpIntegrationsCollapsed, setIsMcpIntegrationsCollapsed] = useState(false);
   const [showMcpIntegrationModal, setShowMcpIntegrationModal] = useState(false);
   const [selectedMcpIntegration, setSelectedMcpIntegration] = useState<any>(null);
+  const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
   const navigate = useNavigate();
 
   const handleTaskUpdate = async (updates: any) => {
@@ -384,7 +386,8 @@ function Board() {
             {board?.projectName && (
               <span className="font-semibold text-[22px] text-white tracking-tight drop-shadow-sm">{board.projectName}</span>
             )}
-                          <button
+            <div className="flex items-center">
+              <button
                 className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                 onClick={() => {
                   if (!board) return;
@@ -392,10 +395,19 @@ function Board() {
                 }}
                 title="Edit project properties"
               >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
+                <Edit className="w-5 h-5" />
+              </button>
+              <button
+                className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                onClick={() => {
+                  if (!board) return;
+                  setShowVersionHistoryModal(true);
+                }}
+                title="View version history"
+              >
+                <History className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
         {/* Board content */}
@@ -451,6 +463,14 @@ function Board() {
           }}
           onProjectUpdate={handleProjectUpdate}
           onProjectDelete={handleProjectDelete}
+        />
+      )}
+      {showVersionHistoryModal && board && (
+        <VersionHistoryModal
+          isOpen={showVersionHistoryModal}
+          onClose={() => setShowVersionHistoryModal(false)}
+          projectId={board.projectId}
+          projectName={board.projectName}
         />
       )}
       

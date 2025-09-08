@@ -241,5 +241,36 @@ export const integrationsApi = {
   }
 };
 
+// Version history-related API calls
+export const historyApi = {
+  async fetchProjectHistory(projectId: number, limit: number = 20) {
+    const res = await fetch(`${window.location.origin}/api/history/${projectId}?limit=${limit}`);
+
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(error);
+    }
+
+    const data = await res.json();
+    return data.history || [];
+  },
+
+  async restoreProjectVersion(projectId: number, versionId: number) {
+    const res = await fetch(`${window.location.origin}/api/history/${projectId}/restore/${versionId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(error);
+    }
+
+    return await res.json();
+  }
+};
+
 
 

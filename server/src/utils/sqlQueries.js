@@ -565,7 +565,7 @@ export const SQL_QUERIES = {
       id,
       project_id,
       description,
-      created_at
+      datetime(created_at, 'localtime') as created_at
     FROM project_history
     WHERE project_id = ?
     ORDER BY created_at DESC
@@ -579,7 +579,7 @@ export const SQL_QUERIES = {
       project_id,
       snapshot,
       description,
-      created_at
+      datetime(created_at, 'localtime') as created_at
     FROM project_history
     WHERE id = ?
   `,
