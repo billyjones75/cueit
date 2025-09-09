@@ -9,6 +9,22 @@ Cueit is a Kanban board tool that lets LLMs manage, update, and organize tasks v
 - node 20.19+
 - npm 10.8+
 
+## Quick Start
+
+You can run Cueit directly without cloning the repository:
+
+```bash
+npx cueit
+```
+
+This will:
+- Download and run the latest version of Cueit
+- Start both the UI and MCP server
+- Access the UI at http://localhost:3000
+- MCP Endpoint available at http://localhost:3000/mcp
+
+After running, see [MCP Configuration](#mcp-configuration) to set up LLM integration.
+
 ## Installation & Setup
 
 1. **Clone the repository**

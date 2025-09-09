@@ -1,29 +1,76 @@
 {
-  "name": "cueit-monorepo",
-  "version": "1.0.0",
+  "name": "cueit",
+  "version": "1.0.3",
   "description": "Cueit - A Kanban board orchestrated by LLMs via MCP",
-  "private": true,
-  "workspaces": [
-    "client",
-    "server"
-  ],
+  "main": "server/src/index.js",
+  "type": "module",
+  "bin": {
+    "cueit": "server/src/index.js"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "dev:client": "cd client && npm run dev",
-    "dev:server": "cd server && npm run dev",
-    "build": "npm run build --workspace=client && npm run build --workspace=server",
-    "start": "concurrently \"npm run start --workspace=server\" \"npm run start --workspace=client\"",
+    "dev:client": "cd client && vite build --watch",
+    "dev:server": "cd server && nodemon src/index.js",
+    "build": "npm run build:client && echo 'No server build step required'",
+    "build:client": "cd client && vite build",
+    "start": "node server/src/index.js",
+    "lint": "cd client && eslint .",
+    "preview": "cd client && vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "rm -rf node_modules client/node_modules server/node_modules client/dist server/dist"
   },
+  "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "better-sqlite3": "^12.2.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "lucide-react": "^0.525.0",
+    "morgan": "^1.10.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3",
+    "zod": "^3.25.76"
+  },
   "devDependencies": {
-    "concurrently": "^8.0.0"
+    "@eslint/js": "^9.29.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^8.0.0",
+    "eslint": "^9.29.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.2.0",
+    "nodemon": "^3.0.2",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
   },
   "keywords": [
     "cueit",
-    "context-management",
+    "MCP",
+    "Kanban",
+    "board",
+    "tasks",
+    "management",
+    "LLM",
+    "AI",
+    "agentic",
     "coding-agents",
-    "project-context",
-    "monorepo"
+    "codegen",
+    "express",
+    "backend",
+    "api",
+    "react",
+    "vite"
+  ],
+  "files": [
+    "server/**",
+    "client/dist/**",
+    "index.js"
   ],
   "author": "billy jones <billy@cueit.sh>",
   "license": "GPL-3.0"
