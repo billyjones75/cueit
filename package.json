@@ -1,6 +1,6 @@
 {
   "name": "cueit",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Cueit - A Kanban board orchestrated by LLMs via MCP",
   "main": "server/src/index.js",
   "type": "module",
