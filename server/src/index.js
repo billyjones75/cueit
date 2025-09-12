@@ -77,5 +77,15 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 App running on: http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log('Add the following to ~/.cursor/mcp.json to integrate with Cursor:');
+  console.log(JSON.stringify({
+    mcpServers: {
+      Cueit: {
+        url: `http://localhost:${PORT}/mcp`,
+        headers: {
+          "MCP-Client": "Cursor"
+        }
+      }
+    }
+  }, null, 2));
 });
